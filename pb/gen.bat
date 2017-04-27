@@ -1,0 +1,1 @@
+protoc -I ./ ./connect.proto --go_out=plugins=grpc:./
