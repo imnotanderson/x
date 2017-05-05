@@ -1,9 +1,10 @@
+//relay between services
 package agent
 
 import (
+	"../log"
 	"../pb"
 	"github.com/golang/protobuf/proto"
-	"github.com/imnotanderson/X/log"
 	"google.golang.org/grpc"
 	"net"
 	"sync"
@@ -22,14 +23,9 @@ func (a *Agent) Init() {
 }
 
 func (a *Agent) Run(closeSign <-chan struct{}) {
-	go a.handleClient()
-	go a.handleClient()
+	go a.handleService()
 	<-closeSign
 	a.handleDestroy()
-}
-
-func (a *Agent) handleClient() {
-
 }
 
 func (a *Agent) handleService() {
@@ -77,6 +73,8 @@ func (a *Agent) Accept(conn pb.Connector_AcceptServer) error {
 			a.mapLock.RUnlock()
 			if targetService != nil {
 				targetService.chSend <- req.Data
+			} else {
+				log.Errorf("no service found id:%v", req.ServiceId)
 			}
 		case sendData := <-service.chSend:
 			err := conn.Send(&pb.Reply{
@@ -94,6 +92,7 @@ func (a *Agent) regService(serviceId uint32) *service {
 	a.mapLock.Lock()
 	defer a.mapLock.Unlock()
 	if nil != a.serviceMap[serviceId] {
+		log.Errorf("reg service err: exist same id %v", serviceId)
 		return nil
 	}
 	service := NewService(serviceId)

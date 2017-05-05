@@ -9,7 +9,7 @@ package pb;
 // The greeting service definition.
 service Connector {
   // Sends a greeting
-  rpc  Accept (stream Request) returns (stream Reply) {}
+  rpc  Accept ( stream Request) returns (stream Reply) {}
 }
 
 // The request message containing the user's name.
