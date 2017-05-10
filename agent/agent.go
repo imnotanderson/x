@@ -97,6 +97,7 @@ func (a *Agent) regService(serviceId uint32) *service {
 	}
 	service := NewService(serviceId)
 	a.serviceMap[serviceId] = service
+	log.Infof("service %v reg", serviceId)
 	return service
 }
 
@@ -104,6 +105,7 @@ func (a *Agent) removeService(serviceId uint32) {
 	a.mapLock.Lock()
 	defer a.mapLock.Unlock()
 	delete(a.serviceMap, serviceId)
+	log.Infof("service %v remove", serviceId)
 }
 
 func checkErr(err error) bool {
