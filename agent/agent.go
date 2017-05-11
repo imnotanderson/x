@@ -2,9 +2,11 @@
 package agent
 
 import (
-	"../log"
-	"../pb"
+	"errors"
 	"github.com/golang/protobuf/proto"
+	"github.com/imnotanderson/X/conf"
+	"github.com/imnotanderson/X/log"
+	"github.com/imnotanderson/X/pb"
 	"google.golang.org/grpc"
 	"net"
 	"sync"
@@ -13,10 +15,14 @@ import (
 type Agent struct {
 	addr       string
 	mapLock    *sync.RWMutex
-	serviceMap map[uint32]chan *service
+	serviceMap map[uint32]*Service
 }
 
-var Module *Agent
+var Module *Agent = &Agent{
+	addr:       conf.Agent_addr,
+	serviceMap: make(map[uint32]*Service),
+	mapLock:    new(sync.RWMutex),
+}
 
 func (a *Agent) Init() {
 
@@ -48,12 +54,12 @@ func (a *Agent) handleDestroy() {
 func (a *Agent) Accept(conn pb.Connector_AcceptServer) error {
 	request, err := conn.Recv()
 	if checkErr(err) {
-		return
+		return err
 	}
 	regRequest := &pb.ServiceRegRequest{}
 	err = proto.Unmarshal(request.Data, regRequest)
 	if checkErr(err) {
-		return
+		return err
 	}
 	service_die := make(chan struct{})
 	defer close(service_die)
@@ -63,11 +69,11 @@ func (a *Agent) Accept(conn pb.Connector_AcceptServer) error {
 
 	for {
 		select {
-		case req, err := <-ch_recv:
-			if err != nil {
-				return
+		case req, ok := <-ch_recv:
+			if ok == false {
+				return errors.New("ch_recv err")
 			}
-			targetService := (*service)(nil)
+			targetService := (*Service)(nil)
 			a.mapLock.Lock()
 			targetService = a.serviceMap[req.ServiceId]
 			a.mapLock.RUnlock()
@@ -81,14 +87,14 @@ func (a *Agent) Accept(conn pb.Connector_AcceptServer) error {
 				Data: sendData,
 			})
 			if err != nil {
-				return
+				return err
 			}
 		}
 	}
 	return nil
 }
 
-func (a *Agent) regService(serviceId uint32) *service {
+func (a *Agent) regService(serviceId uint32) *Service {
 	a.mapLock.Lock()
 	defer a.mapLock.Unlock()
 	if nil != a.serviceMap[serviceId] {
@@ -110,7 +116,7 @@ func (a *Agent) removeService(serviceId uint32) {
 
 func checkErr(err error) bool {
 	if err != nil {
-		log.Error(err)
+		log.Errorf("agent err:%v", err)
 		return true
 	}
 	return false

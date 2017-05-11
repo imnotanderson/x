@@ -1,20 +1,11 @@
 package log
 
-import l "log"
-
-type log struct {
-}
-
-var log *log = &log{}
-
-func Error(agrs ...interface{}) {
-	l.Print("err:", agrs...)
-}
+import "fmt"
 
 func Errorf(format string, args ...interface{}) {
-	l.Printf("err:"+format, args...)
+	fmt.Printf("err:"+format+"\n", args...)
 }
 
 func Infof(format string, args ...interface{}) {
-	l.Printf("info:"+format, args...)
+	fmt.Printf("info:"+format+"\n", args...)
 }

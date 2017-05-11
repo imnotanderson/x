@@ -8,7 +8,7 @@ import (
 // 产生panic时的调用栈打印
 func PrintPanicStack() {
 	if x := recover(); x != nil {
-		Error(x)
+		Errorf("%v", x)
 		i := 0
 		funcName, file, line, ok := runtime.Caller(i)
 		for ok {

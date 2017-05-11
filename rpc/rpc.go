@@ -14,7 +14,7 @@ func NewRpc() *Rpc {
 
 func (r *Rpc) RegFunc(name string, f func()) {
 	if r.fMap[name] != nil {
-		log.Error("same name ", name)
+		log.Errorf("same name %v", name)
 		return
 	}
 	r.fMap[name] = f
@@ -22,7 +22,7 @@ func (r *Rpc) RegFunc(name string, f func()) {
 
 func (r *Rpc) Call(name string) {
 	if r.fMap[name] == nil {
-		log.Error("no func ", name)
+		log.Errorf("no func %v", name)
 		return
 	}
 	r.fMap[name]()

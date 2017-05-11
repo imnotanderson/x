@@ -1,10 +1,10 @@
 package types
 
 import (
-	"../log"
-	"../pb"
 	"context"
 	"github.com/golang/protobuf/proto"
+	"github.com/imnotanderson/X/log"
+	"github.com/imnotanderson/X/pb"
 	"google.golang.org/grpc"
 )
 
@@ -17,7 +17,7 @@ type Stream struct {
 	connector pb.Connector_AcceptClient
 }
 
-func NewStream(addr string, serviceId uint32) {
+func NewStream(addr string, serviceId uint32) *Stream {
 	return &Stream{
 		addr:   addr,
 		id:     serviceId,
@@ -41,7 +41,7 @@ func (s *Stream) Conn() {
 		return
 	}
 	//reg id
-	regRequest := pb.ServiceRegRequest{
+	regRequest := &pb.ServiceRegRequest{
 		ServiceId: s.id,
 	}
 	data, err := proto.Marshal(regRequest)
@@ -62,6 +62,7 @@ func (s *Stream) Conn() {
 	//recv & send msg
 	go s.handleRecv()
 	go s.handleSend()
+	<-s.die
 }
 
 func (s *Stream) handleRecv() {

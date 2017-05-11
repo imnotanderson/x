@@ -32,6 +32,7 @@ func (l *Launcher) Start(modules ...IModule) {
 			l.wg.Done()
 		}()
 	}
+	l.wg.Wait()
 }
 
 func (l *Launcher) Close() {
