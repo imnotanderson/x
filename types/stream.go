@@ -94,3 +94,14 @@ func (s *Stream) handleSend() {
 
 	}
 }
+
+func (s *Stream) Send(data []byte, svrId uint32) {
+	s.chSend <- &pb.Request{
+		Data:      data,
+		ServiceId: svrId,
+	}
+}
+
+func (s Stream) Recv() <-chan []byte {
+	return s.chRecv
+}

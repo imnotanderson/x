@@ -76,7 +76,7 @@ func (a *Agent) Accept(conn pb.Connector_AcceptServer) error {
 			targetService := (*Service)(nil)
 			a.mapLock.Lock()
 			targetService = a.serviceMap[req.ServiceId]
-			a.mapLock.RUnlock()
+			a.mapLock.Unlock()
 			if targetService != nil {
 				targetService.chSend <- req.Data
 			} else {
