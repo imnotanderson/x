@@ -23,7 +23,6 @@ func NewStream(addr string, serviceId uint32) *Stream {
 		id:     serviceId,
 		chSend: make(chan *pb.Request, 128),
 		chRecv: make(chan []byte, 128),
-		die:    make(chan struct{}),
 	}
 }
 
@@ -59,6 +58,7 @@ func (s *Stream) Conn() {
 		log.Errorf("reg svr err %v", err)
 	}
 	s.connector = connector
+	s.die = make(chan struct{})
 	//recv & send msg
 	go s.handleRecv()
 	go s.handleSend()
