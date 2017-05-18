@@ -6,6 +6,7 @@ import (
 	"github.com/imnotanderson/X/log"
 	"github.com/imnotanderson/X/pb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 type Stream struct {
@@ -34,6 +35,7 @@ func (s *Stream) Conn() {
 	}
 	defer conn.Close()
 	c := pb.NewConnectorClient(conn)
+	ctx := metadata.NewContext(context.Background(), metadata.New(map[string]string{"a": "b"}))
 	connector, err := c.Accept(context.Background())
 	if err != nil {
 		log.Errorf("accecp err %v", err)
