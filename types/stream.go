@@ -35,8 +35,9 @@ func (s *Stream) Conn() {
 	}
 	defer conn.Close()
 	c := pb.NewConnectorClient(conn)
-	ctx := metadata.NewContext(context.Background(), metadata.New(map[string]string{"a": "b"}))
-	connector, err := c.Accept(context.Background())
+	ctx := context.Background()
+
+	connector, err := c.Accept(ctx)
 	if err != nil {
 		log.Errorf("accecp err %v", err)
 		return
