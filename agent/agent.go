@@ -3,28 +3,29 @@ package agent
 
 import (
 	"errors"
-	"github.com/golang/protobuf/proto"
 	"github.com/imnotanderson/X/conf"
 	"github.com/imnotanderson/X/log"
 	"github.com/imnotanderson/X/pb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"net"
 	"sync"
 )
 
 var (
 	REG_SERVOCE_ERR_SAME_ID = errors.New("reg service err: exist same id")
+	CH_RECV_ERR             = errors.New("ch_recv err")
 )
 
 type Agent struct {
 	addr       string
 	mapLock    *sync.RWMutex
-	serviceMap map[uint32]*Service
+	serviceMap map[string]*Service
 }
 
 var Module *Agent = &Agent{
 	addr:       conf.Agent_addr,
-	serviceMap: make(map[uint32]*Service),
+	serviceMap: make(map[string]*Service),
 	mapLock:    new(sync.RWMutex),
 }
 
@@ -56,18 +57,21 @@ func (a *Agent) handleDestroy() {
 }
 
 func (a *Agent) Accept(conn pb.Connector_AcceptServer) error {
-	request, err := conn.Recv()
-	if checkErr(err) {
-		return err
+
+	md, ok := metadata.FromContext(conn.Context())
+	if ok == false {
+		log.Errorf("ok == false")
+		return nil
 	}
-	regRequest := &pb.ServiceRegRequest{}
-	err = proto.Unmarshal(request.Data, regRequest)
-	if checkErr(err) {
-		return err
+	if len(md["id"]) == 0 {
+		log.Errorf("no id")
+		return nil
 	}
+	serviceId := md["id"][0]
+
 	service_die := make(chan struct{})
 	defer close(service_die)
-	service, err := a.regService(regRequest.ServiceId)
+	service, err := a.regService(serviceId)
 	if err != nil {
 		return err
 	}
@@ -78,7 +82,7 @@ func (a *Agent) Accept(conn pb.Connector_AcceptServer) error {
 		select {
 		case req, ok := <-ch_recv:
 			if ok == false {
-				return errors.New("ch_recv err")
+				return CH_RECV_ERR
 			}
 			targetService := (*Service)(nil)
 			a.mapLock.Lock()
@@ -101,7 +105,7 @@ func (a *Agent) Accept(conn pb.Connector_AcceptServer) error {
 	return nil
 }
 
-func (a *Agent) regService(serviceId uint32) (*Service, error) {
+func (a *Agent) regService(serviceId string) (*Service, error) {
 	a.mapLock.Lock()
 	defer a.mapLock.Unlock()
 	if nil != a.serviceMap[serviceId] {
@@ -114,7 +118,7 @@ func (a *Agent) regService(serviceId uint32) (*Service, error) {
 	return service, nil
 }
 
-func (a *Agent) removeService(serviceId uint32) {
+func (a *Agent) removeService(serviceId string) {
 	a.mapLock.Lock()
 	defer a.mapLock.Unlock()
 	delete(a.serviceMap, serviceId)

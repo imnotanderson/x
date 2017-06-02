@@ -13,18 +13,13 @@ service Connector {
 
 message Request {
     //send to service id
-    uint32 serviceId = 1;
+    string serviceId = 1;
     bytes data = 2;
 }
 
 message Reply {
   bytes data = 1;
 }
-
-message ServiceRegRequest{
-    uint32 serviceId = 1;
-}
-
 
 //client stream
 service ClientConnector{

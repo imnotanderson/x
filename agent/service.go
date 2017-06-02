@@ -6,11 +6,11 @@ import (
 )
 
 type Service struct {
-	id     uint32
+	id     string
 	chSend chan []byte
 }
 
-func NewService(id uint32) *Service {
+func NewService(id string) *Service {
 	return &Service{
 		id:     id,
 		chSend: make(chan []byte, 128),

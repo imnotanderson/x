@@ -2,27 +2,29 @@ package types
 
 import (
 	"context"
-	"github.com/golang/protobuf/proto"
 	"github.com/imnotanderson/X/log"
 	"github.com/imnotanderson/X/pb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 type Stream struct {
 	addr      string
-	id        uint32
+	name      string
 	chSend    chan *pb.Request
 	chRecv    chan []byte
 	die       chan struct{}
 	connector pb.Connector_AcceptClient
+	kv        map[string]string
 }
 
-func NewStream(addr string, serviceId uint32) *Stream {
+func NewStream(addr string, name string, kv map[string]string) *Stream {
 	return &Stream{
 		addr:   addr,
-		id:     serviceId,
+		name:   name,
 		chSend: make(chan *pb.Request, 128),
 		chRecv: make(chan []byte, 128),
+		kv:     kv,
 	}
 }
 
@@ -34,30 +36,12 @@ func (s *Stream) Conn() {
 	}
 	defer conn.Close()
 	c := pb.NewConnectorClient(conn)
-	ctx := context.Background()
+	ctx := metadata.NewContext(context.Background(), metadata.New(s.kv))
 
 	connector, err := c.Accept(ctx)
 	if err != nil {
 		log.Errorf("accecp err %v", err)
 		return
-	}
-	//reg id
-	regRequest := &pb.ServiceRegRequest{
-		ServiceId: s.id,
-	}
-	data, err := proto.Marshal(regRequest)
-	if err != nil {
-		log.Errorf("marsha regrequest err %v", err)
-		return
-	}
-	request := &pb.Request{
-		Data:      data,
-		ServiceId: 0,
-	}
-
-	err = connector.Send(request)
-	if err != nil {
-		log.Errorf("reg svr err %v", err)
 	}
 	s.connector = connector
 	s.die = make(chan struct{})
@@ -68,8 +52,8 @@ func (s *Stream) Conn() {
 }
 
 func (s *Stream) handleRecv() {
-	log.Infof("service %v recv start", s.id)
-	defer log.Infof("service %v recv end", s.id)
+	log.Infof("service %v recv start", s.name)
+	defer log.Infof("service %v recv end", s.name)
 	for {
 		reply, err := s.connector.Recv()
 		if err != nil {
@@ -81,8 +65,8 @@ func (s *Stream) handleRecv() {
 }
 
 func (s *Stream) handleSend() {
-	log.Infof("service %v send start", s.id)
-	defer log.Infof("service %v send end", s.id)
+	log.Infof("service %v send start", s.name)
+	defer log.Infof("service %v send end", s.name)
 	for {
 		select {
 		case req := <-s.chSend:
@@ -97,7 +81,7 @@ func (s *Stream) handleSend() {
 	}
 }
 
-func (s *Stream) Send(data []byte, svrId uint32) {
+func (s *Stream) Send(data []byte, svrId string) {
 	s.chSend <- &pb.Request{
 		Data:      data,
 		ServiceId: svrId,

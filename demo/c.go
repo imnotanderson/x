@@ -5,13 +5,16 @@ import (
 )
 
 func main() {
-	C(1, 2, []byte("from c1"))
-	C(2, 1, []byte("from c2"))
+	C("1", "2", []byte("from c1"))
+	C("2", "1", []byte("from c2"))
 	select {}
 }
 
-func C(id uint32, toId uint32, data []byte) {
-	s := types.NewStream("127.0.0.1:9999", id)
+func C(id string, toId string, data []byte) {
+	kv := map[string]string{
+		"id": id,
+	}
+	s := types.NewStream("127.0.0.1:9999", id, kv)
 	go func() {
 		for {
 			s.Conn()
