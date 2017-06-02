@@ -12,6 +12,10 @@ import (
 	"sync"
 )
 
+var (
+	REG_SERVOCE_ERR_SAME_ID = errors.New("reg service err: exist same id")
+)
+
 type Agent struct {
 	addr       string
 	mapLock    *sync.RWMutex
@@ -63,7 +67,10 @@ func (a *Agent) Accept(conn pb.Connector_AcceptServer) error {
 	}
 	service_die := make(chan struct{})
 	defer close(service_die)
-	service := a.regService(regRequest.ServiceId)
+	service, err := a.regService(regRequest.ServiceId)
+	if err != nil {
+		return err
+	}
 	defer a.removeService(service.id)
 	ch_recv := service.start_recv(conn, service_die)
 
@@ -94,17 +101,17 @@ func (a *Agent) Accept(conn pb.Connector_AcceptServer) error {
 	return nil
 }
 
-func (a *Agent) regService(serviceId uint32) *Service {
+func (a *Agent) regService(serviceId uint32) (*Service, error) {
 	a.mapLock.Lock()
 	defer a.mapLock.Unlock()
 	if nil != a.serviceMap[serviceId] {
 		log.Errorf("reg service err: exist same id %v", serviceId)
-		return nil
+		return nil, REG_SERVOCE_ERR_SAME_ID
 	}
 	service := NewService(serviceId)
 	a.serviceMap[serviceId] = service
 	log.Infof("service %v reg", serviceId)
-	return service
+	return service, nil
 }
 
 func (a *Agent) removeService(serviceId uint32) {

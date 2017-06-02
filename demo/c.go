@@ -5,11 +5,6 @@ import (
 )
 
 func main() {
-	//s := types.NewStream("127.0.0.1:9999", 1)
-	//for {
-	//	s.Conn()
-	//	println("reconn")
-	//}
 	C(1, 2, []byte("from c1"))
 	C(2, 1, []byte("from c2"))
 	select {}

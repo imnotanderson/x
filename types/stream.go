@@ -6,7 +6,6 @@ import (
 	"github.com/imnotanderson/X/log"
 	"github.com/imnotanderson/X/pb"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 )
 
 type Stream struct {
