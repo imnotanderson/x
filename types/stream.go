@@ -19,20 +19,20 @@ type Stream struct {
 }
 
 func NewStream(addr string, name string, kv map[string]string) *Stream {
-	return &Stream{
+	s := &Stream{
 		addr:   addr,
 		name:   name,
 		chSend: make(chan *pb.Request, 128),
 		chRecv: make(chan []byte, 128),
 		kv:     kv,
 	}
+	return s
 }
 
-func (s *Stream) Conn() {
+func (s *Stream) Conn() error {
 	conn, err := grpc.Dial(s.addr, grpc.WithInsecure())
 	if err != nil {
-		log.Errorf("dial %v err: %v", s.addr, err)
-		return
+		return err
 	}
 	defer conn.Close()
 	c := pb.NewConnectorClient(conn)
@@ -40,15 +40,14 @@ func (s *Stream) Conn() {
 
 	connector, err := c.Accept(ctx)
 	if err != nil {
-		log.Errorf("accecp err %v", err)
-		return
+		return err
 	}
 	s.connector = connector
 	s.die = make(chan struct{})
 	//recv & send msg
 	go s.handleRecv()
 	go s.handleSend()
-	<-s.die
+	return nil
 }
 
 func (s *Stream) handleRecv() {
@@ -90,4 +89,8 @@ func (s *Stream) Send(data []byte, svrId string) {
 
 func (s Stream) Recv() <-chan []byte {
 	return s.chRecv
+}
+
+func (s Stream) Close() {
+	s.connector.CloseSend()
 }

@@ -29,3 +29,4 @@ service ClientConnector{
 message Frame{
     bytes data = 1;
 }
+

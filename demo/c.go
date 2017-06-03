@@ -17,7 +17,7 @@ func C(id string, toId string, data []byte) {
 	s := types.NewStream("127.0.0.1:9999", id, kv)
 	go func() {
 		for {
-			s.Conn()
+			<-s.Conn()
 			println("reconn")
 		}
 	}()
