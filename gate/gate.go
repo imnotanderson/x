@@ -4,8 +4,8 @@ package gate
 import (
 	"github.com/imnotanderson/X/conf"
 	"github.com/imnotanderson/X/log"
+	"github.com/imnotanderson/X/packet"
 	"github.com/imnotanderson/X/types"
-	"io"
 	"net"
 	"sync"
 )
@@ -14,10 +14,13 @@ type Gate struct {
 	addr           string
 	sessionMap     map[string]*session
 	sessionMapLock sync.RWMutex
+	auth           func(conn net.Conn, data []byte) (uuid string, err error)
 }
 
 var Module *Gate = &Gate{
-	addr: conf.Gate_addr,
+	addr:       conf.Gate_addr,
+	auth:       conf.Auth,
+	sessionMap: map[string]*session{},
 }
 
 func (g *Gate) Init() {
@@ -46,22 +49,17 @@ func (g *Gate) waitForClient() {
 func (g *Gate) handleConn(conn net.Conn) {
 	defer conn.Close()
 	chRecv := make(chan []byte)
-	header := make([]byte, 2)
+	packet := packet.NewPacket()
 	conn_die := make(chan struct{})
 	go func() {
 		defer close(conn_die)
 		for {
-			size, err := io.ReadFull(conn, header)
+			data, err := packet.Read(conn)
 			if checkErr(err) {
 				return
 			}
-			payload := make([]byte, size)
-			_, err = io.ReadFull(conn, payload)
-			if checkErr(err) {
-				return
-			}
-			payload = g.decode(payload)
-			chRecv <- payload
+			data = g.decode(data)
+			chRecv <- data
 		}
 	}()
 
@@ -135,12 +133,6 @@ func (g *Gate) createSession(uuid string) (*session, error) {
 		}
 	}()
 	return session, nil
-}
-
-func (g *Gate) auth(conn net.Conn, data []byte) (uuid string, err error) {
-	uuid = "1"
-	err = nil
-	return
 }
 
 func checkErr(err error) bool {

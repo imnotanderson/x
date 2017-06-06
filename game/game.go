@@ -1,11 +1,17 @@
 package game
 
 import (
+	"errors"
 	"github.com/imnotanderson/X/conf"
 	"github.com/imnotanderson/X/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"net"
+)
+
+var (
+	MD_PARSE_ERR         = errors.New("md parse err")
+	MD_PARSE_ERR_NO_UUID = errors.New("md parse err no uuid")
 )
 
 type Game struct {
@@ -40,10 +46,10 @@ func (g *Game) handleClient() {
 func (g *Game) Accept(connector pb.Connector_AcceptServer) error {
 	md, ok := metadata.FromContext(connector.Context())
 	if ok == false {
-		return
+		return MD_PARSE_ERR
 	}
 	if len(md["uuid"]) <= 0 {
-		return
+		return MD_PARSE_ERR_NO_UUID
 	}
 
 	return nil

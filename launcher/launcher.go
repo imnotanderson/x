@@ -28,8 +28,8 @@ func (l *Launcher) Start(modules ...IModule) {
 		l.wg.Add(1)
 		go func() {
 			defer utils.PrintPanicStack()
+			defer l.wg.Done()
 			m.Run(c)
-			l.wg.Done()
 		}()
 	}
 	l.wg.Wait()
