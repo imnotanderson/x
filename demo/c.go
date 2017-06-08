@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/imnotanderson/X/types"
+	"time"
 )
 
 func main() {
@@ -25,5 +26,7 @@ func C(id string, toId string, data []byte) {
 		data := <-s.Recv()
 		println(id, "======>recv", string(data))
 	}()
+	<-time.After(time.Second)
 	s.Send(data, toId)
+
 }

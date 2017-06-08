@@ -1,1 +1,1 @@
-protoc -I ./ ./connect.proto --go_out=plugins=grpc:./
+protoc -I ./ ./*.proto --go_out=plugins=grpc:./

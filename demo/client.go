@@ -23,7 +23,7 @@ func main() {
 	go func() {
 		p := packet.NewPacket()
 		for {
-			data, err := p.Read(conn)
+			data, err := p.ReadData(conn)
 			checkErr(err)
 			cRecv <- data
 		}

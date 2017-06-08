@@ -16,7 +16,7 @@ func NewPacket() *Packet {
 	}
 }
 
-func (p *Packet) Read(r io.Reader) ([]byte, error) {
+func (p *Packet) ReadData(r io.Reader) ([]byte, error) {
 	_, err := io.ReadFull(r, p.header)
 	if err != nil {
 		return nil, err

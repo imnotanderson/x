@@ -8,6 +8,7 @@ import (
 	"github.com/imnotanderson/X/types"
 	"net"
 	"sync"
+	"time"
 )
 
 type Gate struct {
@@ -54,7 +55,7 @@ func (g *Gate) handleConn(conn net.Conn) {
 	go func() {
 		defer close(conn_die)
 		for {
-			data, err := packet.Read(conn)
+			data, err := packet.ReadData(conn)
 			if checkErr(err) {
 				return
 			}
@@ -104,12 +105,13 @@ func (g *Gate) createSession(uuid string) (*session, error) {
 		"uuid": uuid,
 	}
 	gameSvrAddr := g.selectGameSvr(uuid)
-	stream := types.NewStream(gameSvrAddr, "session", kv)
+	stream := types.NewStream(gameSvrAddr, "clientsession", kv)
 	session := &session{
 		uuid:   uuid,
 		stream: stream,
 		die:    make(chan struct{}),
 	}
+
 	g.sessionMapLock.Lock()
 	defer g.sessionMapLock.Unlock()
 	oldSession := g.sessionMap[uuid]
@@ -118,16 +120,26 @@ func (g *Gate) createSession(uuid string) (*session, error) {
 			oldSession.stream.Close()
 		}
 	}
-	err := session.stream.Conn()
-	if err != nil {
-		return nil, err
-	}
+	go func() {
+		for {
+			select {
+			case <-session.stream.Conn():
+				<-time.After(time.Second)
+			case <-session.die:
+				return
+			}
+		}
+	}()
 	g.sessionMap[uuid] = session
+	log.Debugf("add session %v", uuid)
 	go func() {
 		<-session.die
 		g.sessionMapLock.Lock()
 		defer g.sessionMapLock.Unlock()
-		delete(g.sessionMap, session.uuid)
+		if g.sessionMap[session.uuid] == session {
+			delete(g.sessionMap, session.uuid)
+			log.Debugf("remove session %v", uuid)
+		}
 		if session.stream != nil {
 			session.stream.Close()
 		}

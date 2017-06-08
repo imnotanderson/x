@@ -6,6 +6,7 @@ import (
 	"github.com/imnotanderson/X/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"time"
 )
 
 type Stream struct {
@@ -29,10 +30,12 @@ func NewStream(addr string, name string, kv map[string]string) *Stream {
 	return s
 }
 
-func (s *Stream) Conn() error {
+func (s *Stream) Conn() <-chan struct{} {
+	s.die = make(chan struct{})
 	conn, err := grpc.Dial(s.addr, grpc.WithInsecure())
 	if err != nil {
-		return err
+		close(s.die)
+		return <-s.die
 	}
 	defer conn.Close()
 	c := pb.NewConnectorClient(conn)
@@ -40,23 +43,26 @@ func (s *Stream) Conn() error {
 
 	connector, err := c.Accept(ctx)
 	if err != nil {
-		return err
+		close(s.die)
+		return <-s.die
 	}
 	s.connector = connector
-	s.die = make(chan struct{})
+
 	//recv & send msg
 	go s.handleRecv()
 	go s.handleSend()
-	return nil
+	return <-s.die
 }
 
 func (s *Stream) handleRecv() {
 	log.Infof("service %v recv start", s.name)
 	defer log.Infof("service %v recv end", s.name)
+	defer close(s.chRecv)
 	for {
 		reply, err := s.connector.Recv()
 		if err != nil {
 			close(s.die)
+			log.Debugf(err.Error())
 			return
 		}
 		s.chRecv <- reply.Data
