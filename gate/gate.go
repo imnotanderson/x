@@ -15,12 +15,12 @@ type Gate struct {
 	addr           string
 	sessionMap     map[string]*session
 	sessionMapLock sync.RWMutex
-	auth           func(conn net.Conn, data []byte) (uuid string, err error)
+	Auth           func(conn net.Conn, data []byte) (uuid string, err error)
 }
 
 var Module *Gate = &Gate{
 	addr:       conf.Gate_addr,
-	auth:       conf.Auth,
+	Auth:       conf.Auth,
 	sessionMap: map[string]*session{},
 }
 
@@ -68,7 +68,7 @@ func (g *Gate) handleConn(conn net.Conn) {
 	if authData == nil {
 		return
 	}
-	uuid, err := g.auth(conn, authData)
+	uuid, err := g.Auth(conn, authData)
 	if err != nil {
 		return
 	}
