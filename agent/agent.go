@@ -64,7 +64,7 @@ func (a *Agent) Accept(conn pb.Connector_AcceptServer) error {
 		return nil
 	}
 	if len(md["id"]) == 0 {
-		log.Errorf("no id")
+		log.Errorf("no id %+v", md)
 		return nil
 	}
 	serviceId := md["id"][0]

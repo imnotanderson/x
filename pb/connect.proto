@@ -26,6 +26,6 @@ message Frame{
 }
 
 message Msg{
-    uint32 msgType = 1;
+    int32 msgType = 1;
     bytes msgData = 2;
 }

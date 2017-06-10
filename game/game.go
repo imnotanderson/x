@@ -2,9 +2,11 @@ package game
 
 import (
 	"errors"
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/imnotanderson/X/conf"
 	"github.com/imnotanderson/X/log"
+	. "github.com/imnotanderson/X/msg"
 	"github.com/imnotanderson/X/pb"
 	. "github.com/imnotanderson/X/types"
 	"google.golang.org/grpc"
@@ -38,13 +40,11 @@ func (g *Game) Run(closeSign <-chan struct{}) {
 	go g.handleClient()
 
 	//handle stream
-	kv := map[string]string{
-		"id": "game",
-	}
+	kv := map[string]string{"id": "game"}
 	g.stream = NewStream(conf.Agent_addr, "game", kv)
-	go g.handleStream()
+	go g.handleRecvStream()
 	select {
-	case g.stream.Conn():
+	case <-g.stream.Conn():
 	case <-closeSign:
 		return
 	}
@@ -74,20 +74,20 @@ func (g *Game) Accept(connector pb.Connector_AcceptServer) error {
 	uuid := md["uuid"][0]
 
 	player := g.addPlayer(uuid)
-
 	log.Debugf("player %v join", uuid)
 	defer close(player.Die)
 	for {
 		req, err := connector.Recv()
 		if err != nil {
-			return
+			return err
 		}
 		//todo:msg pool
 		msg := &pb.Msg{}
 		err = proto.Unmarshal(req.Data, msg)
 		if err != nil {
-			return
+			return err
 		}
+		SendPlayerMsg(player, msg.MsgType, msg.MsgData)
 	}
 	return nil
 }
@@ -97,8 +97,7 @@ func (g *Game) addPlayer(uuid string) *Player {
 	defer g.playerMapLock.Unlock()
 	oldPlayer := g.playerMap[uuid]
 	if oldPlayer != nil {
-		log.Errorf("same uuid %v", uuid)
-		return
+		panic(fmt.Sprintf("same uuid %v", uuid))
 	}
 	player := &Player{
 		Uuid:   uuid,
@@ -110,14 +109,29 @@ func (g *Game) addPlayer(uuid string) *Player {
 	return player
 }
 
-func (g *Game) handleStream() {
+func (g *Game) handleRecvStream() {
 	go func() {
 		for {
 			data, ok := <-g.stream.Recv()
 			if ok == false {
 				return
 			}
-			println(data)
+			msg := &pb.Msg{}
+			err := proto.Unmarshal(data, msg)
+			if err != nil {
+				return
+			}
+			SendDataMsg(msg.MsgType, msg.MsgData)
 		}
 	}()
+}
+
+func (g *Game) SendMsgToService(svrId string, msgType int32, msgData []byte) {
+	msg := &pb.Msg{MsgType: msgType, MsgData: msgData}
+	data, err := proto.Marshal(msg)
+	if err != nil {
+		log.Errorf("marshal msg err %v", err)
+		return
+	}
+	g.stream.Send(data, svrId)
 }
