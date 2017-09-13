@@ -43,10 +43,12 @@ func (g *Game) Run(closeSign <-chan struct{}) {
 	kv := map[string]string{"id": "game"}
 	g.stream = NewStream(conf.Agent_addr, "game", kv)
 	go g.handleRecvStream()
+	for{
 	select {
-	case <-g.stream.Conn():
-	case <-closeSign:
-		return
+		case <-g.stream.Conn():
+		case <-closeSign:
+			return
+		}
 	}
 }
 
