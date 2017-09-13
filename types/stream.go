@@ -31,7 +31,7 @@ func NewStream(addr string, name string, kv map[string]string) *Stream {
 
 func (s *Stream) Conn() <-chan struct{} {
 	s.die = make(chan struct{})
-	conn, err := grpc.Dial(s.addr, grpc.WithInsecure())
+	conn, err := grpc.Dial(s.addr, grpc.WithBlock(), grpc.WithInsecure())
 	if err != nil {
 		close(s.die)
 		return s.die
